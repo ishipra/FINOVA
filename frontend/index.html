@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finova — Finance Dashboard</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="login-page" class="page active">
+  <div class="auth-container">
+    <div class="auth-brand">
+      <div class="brand-icon">F</div>
+      <h1>Finova</h1>
+      <p>Finance Management System</p>
+    </div>
+    <div class="auth-card">
+      <h2>Sign in</h2>
+      <div id="login-error" class="alert alert-error hidden"></div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="admin@finance.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••">
+      </div>
+      <button class="btn btn-primary btn-full" onclick="login()">Sign in</button>
+      <p class="auth-switch">Don't have an account? <a href="#" onclick="showPage('register-page')">Register</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- REGISTER PAGE -->
+<div id="register-page" class="page">
+  <div class="auth-container">
+    <div class="auth-brand">
+      <div class="brand-icon">F</div>
+      <h1>Finova</h1>
+      <p>Finance Management System</p>
+    </div>
+    <div class="auth-card">
+      <h2>Create account</h2>
+      <div id="register-error" class="alert alert-error hidden"></div>
+      <div id="register-success" class="alert alert-success hidden"></div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="John Doe">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="you@example.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="••••••••">
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="reg-role">
+          <option value="viewer">Viewer</option>
+          <option value="analyst">Analyst</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="register()">Create account</button>
+      <p class="auth-switch">Already have an account? <a href="#" onclick="showPage('login-page')">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD PAGE -->
+<div id="dashboard-page" class="page">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">F</div>
+      <span>Finova</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" onclick="showTab('overview')">
+        <span class="nav-icon">&#9632;</span> Overview
+      </a>
+      <a href="#" class="nav-item" onclick="showTab('transactions')">
+        <span class="nav-icon">&#8644;</span> Transactions
+      </a>
+      <a href="#" class="nav-item" id="nav-users" style="display:none" onclick="showTab('users')">
+        <span class="nav-icon">&#9786;</span> Users
+      </a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar">A</div>
+      <div class="user-info">
+        <div class="user-name" id="sidebar-name">Admin</div>
+        <div class="user-role" id="sidebar-role">admin</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">&#10006;</button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main-content">
+
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview" class="tab active">
+      <div class="page-header">
+        <h2>Overview</h2>
+        <span id="header-date" class="header-date"></span>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="cards-grid">
+        <div class="card card-income">
+          <div class="card-label">Total Income</div>
+          <div class="card-value" id="total-income">--</div>
+          <div class="card-sub">All time</div>
+        </div>
+        <div class="card card-expense">
+          <div class="card-label">Total Expenses</div>
+          <div class="card-value" id="total-expense">--</div>
+          <div class="card-sub">All time</div>
+        </div>
+        <div class="card card-balance">
+          <div class="card-label">Net Balance</div>
+          <div class="card-value" id="net-balance">--</div>
+          <div class="card-sub">Income - Expenses</div>
+        </div>
+        <div class="card card-count">
+          <div class="card-label">Transactions</div>
+          <div class="card-value" id="total-count">--</div>
+          <div class="card-sub">Total records</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Category breakdown -->
+        <div class="panel">
+          <div class="panel-header">Category Breakdown</div>
+          <div id="category-list" class="category-list"></div>
+        </div>
+
+        <!-- Recent transactions -->
+        <div class="panel">
+          <div class="panel-header">Recent Transactions</div>
+          <div id="recent-list" class="recent-list"></div>
+        </div>
+      </div>
+
+      <!-- Monthly trends -->
+      <div class="panel" id="trends-panel" style="display:none">
+        <div class="panel-header">Monthly Trends</div>
+        <div id="trends-list" class="trends-list"></div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS TAB -->
+    <div id="tab-transactions" class="tab">
+      <div class="page-header">
+        <h2>Transactions</h2>
+        <button class="btn btn-primary" id="add-tx-btn" style="display:none" onclick="showModal('add-transaction-modal')">+ Add Transaction</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters-bar">
+        <select id="filter-type" onchange="loadTransactions()">
+          <option value="">All types</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <input type="text" id="filter-category" placeholder="Filter by category" oninput="loadTransactions()">
+        <input type="date" id="filter-from" onchange="loadTransactions()">
+        <input type="date" id="filter-to" onchange="loadTransactions()">
+        <button class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+      </div>
+
+      <div class="panel">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Category</th>
+              <th>Type</th>
+              <th>Amount</th>
+              <th>Notes</th>
+              <th id="actions-header">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="transactions-tbody"></tbody>
+        </table>
+        <div class="pagination">
+          <button class="btn btn-secondary" onclick="prevPage()">Previous</button>
+          <span id="page-info">Page 1</span>
+          <button class="btn btn-secondary" onclick="nextPage()">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS TAB -->
+    <div id="tab-users" class="tab">
+      <div class="page-header">
+        <h2>User Management</h2>
+      </div>
+      <div class="panel">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ADD TRANSACTION MODAL -->
+<div id="add-transaction-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add Transaction</h3>
+      <button onclick="hideModal('add-transaction-modal')">&#10006;</button>
+    </div>
+    <div id="tx-error" class="alert alert-error hidden"></div>
+    <div class="form-group">
+      <label>Amount</label>
+      <input type="number" id="tx-amount" placeholder="0.00" min="0.01" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Type</label>
+      <select id="tx-type">
+        <option value="income">Income</option>
+        <option value="expense">Expense</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Category</label>
+      <input type="text" id="tx-category" placeholder="e.g. Salary, Food, Rent">
+    </div>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="tx-date">
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <input type="text" id="tx-notes" placeholder="Optional note">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="hideModal('add-transaction-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addTransaction()">Add</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

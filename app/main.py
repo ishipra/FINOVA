@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from sqlalchemy.exc import SQLAlchemyError
 from app.routers import auth, users, transactions, dashboard
 from app.core.exceptions import (
@@ -13,12 +15,6 @@ app = FastAPI(
     title="Finance Dashboard API",
     description="A role-based finance management backend built with FastAPI and SQLite",
     version="1.0.0",
-    contact={
-        "name": "Finance Dashboard",
-    },
-    license_info={
-        "name": "MIT"
-    }
 )
 
 app.add_middleware(
@@ -45,9 +41,11 @@ app.include_router(users.router)
 app.include_router(transactions.router)
 app.include_router(dashboard.router)
 
-@app.get("/", tags=["Health"])
-async def root():
-    return {"message": "Finance Dashboard API is running"}
+app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+
+@app.get("/", include_in_schema=False)
+async def serve_frontend():
+    return FileResponse("frontend/index.html")
 
 @app.get("/health", tags=["Health"])
 async def health():
