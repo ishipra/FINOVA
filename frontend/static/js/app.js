@@ -4,7 +4,6 @@ let currentUser = JSON.parse(localStorage.getItem('user') || 'null')
 let currentPage = 0
 const limit = 10
 
-// ─── UTILS ───────────────────────────────────────────────
 function fmt(amount) {
   return '₹' + Number(amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })
 }
@@ -27,11 +26,11 @@ function showPage(id) {
   document.getElementById(id).classList.add('active')
 }
 
-function showTab(name) {
+function showTab(name, el) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
   document.getElementById('tab-' + name).classList.add('active')
-  event.currentTarget.classList.add('active')
+  if (el) el.classList.add('active')
   if (name === 'transactions') loadTransactions()
   if (name === 'users') loadUsers()
 }
@@ -47,7 +46,6 @@ function showError(id, msg) {
 
 function hideError(id) { document.getElementById(id).classList.add('hidden') }
 
-// ─── AUTH ─────────────────────────────────────────────────
 async function login() {
   hideError('login-error')
   const email = document.getElementById('login-email').value
@@ -74,7 +72,7 @@ async function register() {
   }
   try {
     await api('POST', '/auth/register', body)
-    document.getElementById('register-success').textContent = 'Account created! Please sign in.'
+    document.getElementById('register-success').textContent = 'Account created! Signing you in...'
     document.getElementById('register-success').classList.remove('hidden')
     setTimeout(() => showPage('login-page'), 1500)
   } catch (e) {
@@ -90,14 +88,14 @@ function logout() {
   showPage('login-page')
 }
 
-// ─── DASHBOARD INIT ───────────────────────────────────────
 function initDashboard() {
   showPage('dashboard-page')
   document.getElementById('sidebar-name').textContent = currentUser.full_name
   document.getElementById('sidebar-role').textContent = currentUser.role
   document.getElementById('user-avatar').textContent = currentUser.full_name[0].toUpperCase()
-  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-IN', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  })
   if (currentUser.role === 'admin' || currentUser.role === 'analyst') {
     document.getElementById('add-tx-btn').style.display = 'inline-block'
     document.getElementById('trends-panel').style.display = 'block'
@@ -106,14 +104,10 @@ function initDashboard() {
   if (currentUser.role === 'admin') {
     document.getElementById('nav-users').style.display = 'flex'
   }
-
-  // Set today's date as default in add transaction form
   document.getElementById('tx-date').value = new Date().toISOString().split('T')[0]
-
   loadSummary()
 }
 
-// ─── SUMMARY ──────────────────────────────────────────────
 async function loadSummary() {
   try {
     const data = await api('GET', '/dashboard/summary')
@@ -122,7 +116,6 @@ async function loadSummary() {
     document.getElementById('net-balance').textContent = fmt(data.net_balance)
     document.getElementById('total-count').textContent = data.total_transactions
 
-    // Category breakdown
     const max = Math.max(...data.category_breakdown.map(c => c.total), 1)
     document.getElementById('category-list').innerHTML = data.category_breakdown.slice(0, 6).map(c => `
       <div class="category-item">
@@ -134,10 +127,10 @@ async function loadSummary() {
       </div>
     `).join('')
 
-    // Recent transactions
     document.getElementById('recent-list').innerHTML = data.recent_transactions.map(t => `
       <div class="recent-item">
-        <div class="recent-info">
+        <div class="recent-dot ${t.type === 'income' ? 'dot-income' : 'dot-expense'}"></div>
+        <div class="recent-info" style="flex:1;margin-left:8px">
           <div class="recent-cat">${t.category}</div>
           <div class="recent-date">${fmtDate(t.date)}</div>
         </div>
@@ -146,12 +139,9 @@ async function loadSummary() {
         </div>
       </div>
     `).join('')
-  } catch (e) {
-    console.error(e)
-  }
+  } catch (e) { console.error(e) }
 }
 
-// ─── TRENDS ───────────────────────────────────────────────
 async function loadTrends() {
   try {
     const data = await api('GET', '/dashboard/trends')
@@ -159,12 +149,12 @@ async function loadTrends() {
     document.getElementById('trends-list').innerHTML = data.map(t => `
       <div class="trend-item">
         <div class="trend-month">${t.month}</div>
-        <div class="trend-bar-wrap">
+        <div>
           <div class="trend-label">Income</div>
           <div class="trend-bar-bg"><div class="trend-bar trend-income-bar" style="width:${(t.income/maxVal*100).toFixed(1)}%"></div></div>
           <div class="trend-val amount-income">${fmt(t.income)}</div>
         </div>
-        <div class="trend-bar-wrap">
+        <div>
           <div class="trend-label">Expense</div>
           <div class="trend-bar-bg"><div class="trend-bar trend-expense-bar" style="width:${(t.expense/maxVal*100).toFixed(1)}%"></div></div>
           <div class="trend-val amount-expense">${fmt(t.expense)}</div>
@@ -174,7 +164,6 @@ async function loadTrends() {
   } catch (e) { console.error(e) }
 }
 
-// ─── TRANSACTIONS ─────────────────────────────────────────
 async function loadTransactions() {
   const type = document.getElementById('filter-type').value
   const category = document.getElementById('filter-category').value
@@ -189,23 +178,22 @@ async function loadTransactions() {
 
   try {
     const data = await api('GET', url)
-    const canEdit = currentUser.role === 'admin' || currentUser.role === 'analyst'
     const canDelete = currentUser.role === 'admin'
 
-    document.getElementById('transactions-tbody').innerHTML = data.map(t => `
+    document.getElementById('transactions-tbody').innerHTML = data.length ? data.map(t => `
       <tr>
         <td>${fmtDate(t.date)}</td>
-        <td>${t.category}</td>
+        <td style="color:var(--text);font-weight:600">${t.category}</td>
         <td><span class="badge badge-${t.type}">${t.type}</span></td>
-        <td class="${t.type === 'income' ? 'amount-income' : 'amount-expense'}" style="font-weight:600">
+        <td class="${t.type === 'income' ? 'amount-income' : 'amount-expense'}" style="font-weight:700">
           ${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}
         </td>
-        <td style="color:var(--text-muted);font-size:0.85rem">${t.notes || '—'}</td>
+        <td style="font-size:0.775rem">${t.notes || '—'}</td>
         <td>
           ${canDelete ? `<button class="btn btn-sm btn-danger" onclick="deleteTransaction('${t.id}')">Delete</button>` : '—'}
         </td>
       </tr>
-    `).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px">No transactions found</td></tr>'
+    `).join('') : `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px;font-size:0.875rem">No transactions found</td></tr>`
 
     document.getElementById('page-info').textContent = `Page ${currentPage + 1}`
   } catch (e) { console.error(e) }
@@ -240,7 +228,6 @@ async function addTransaction() {
     hideModal('add-transaction-modal')
     loadTransactions()
     loadSummary()
-    // Reset form
     document.getElementById('tx-amount').value = ''
     document.getElementById('tx-category').value = ''
     document.getElementById('tx-notes').value = ''
@@ -258,14 +245,19 @@ async function deleteTransaction(id) {
   } catch (e) { alert(e.message) }
 }
 
-// ─── USERS ────────────────────────────────────────────────
 async function loadUsers() {
   try {
     const data = await api('GET', '/users/')
+    const colors = { admin: 'linear-gradient(135deg,#6366f1,#818cf8)', analyst: 'linear-gradient(135deg,#f59e0b,#fbbf24)', viewer: 'linear-gradient(135deg,#64748b,#94a3b8)' }
     document.getElementById('users-tbody').innerHTML = data.map(u => `
       <tr>
-        <td style="font-weight:500">${u.full_name}</td>
-        <td style="color:var(--text-muted)">${u.email}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="user-row-avatar" style="background:${colors[u.role] || colors.viewer}">${u.full_name[0].toUpperCase()}</div>
+            <span style="color:var(--text);font-weight:600">${u.full_name}</span>
+          </div>
+        </td>
+        <td>${u.email}</td>
         <td><span class="badge badge-${u.role}">${u.role}</span></td>
         <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
         <td>
@@ -285,7 +277,6 @@ async function toggleStatus(id, currentStatus) {
   } catch (e) { alert(e.message) }
 }
 
-// ─── INIT ─────────────────────────────────────────────────
 if (token && currentUser) {
   initDashboard()
 } else {
